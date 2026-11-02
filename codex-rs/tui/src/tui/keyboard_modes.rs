@@ -257,7 +257,10 @@ fn keyboard_enhancement_flags(
     // tmux's xterm key format also loses Shift-Enter when event types are
     // reported. An unavailable/unrecognized tmux probe must take the same safe
     // fallback. Preserve repeat classification on confirmed csi-u transports.
+    // Direct Kitty sessions can deliver a Backspace release that results in a second deletion;
+    // tmux normalizes the event, so keep event-type reporting for Kitty under tmux.
     if matches!(terminal_name, TerminalName::Ghostty | TerminalName::Iterm2)
+        || (terminal_name == TerminalName::Kitty && !running_in_tmux_session)
         || (running_in_tmux_session && !matches!(tmux_extended_keys_format, Some("csi-u")))
     {
         flags
@@ -428,14 +431,14 @@ mod tests {
     }
 
     #[test]
-    fn keyboard_enhancement_preserves_repeat_reporting_for_kitty() {
+    fn keyboard_enhancement_suppresses_release_reporting_for_direct_kitty() {
         assert_eq!(
             ansi_for(PushKeyboardEnhancementFlags(keyboard_enhancement_flags(
                 TerminalName::Kitty,
                 /*running_in_tmux_session*/ false,
                 /*tmux_extended_keys_format*/ None
             ))),
-            "\x1b[>7u"
+            "\x1b[>5u"
         );
     }
 
